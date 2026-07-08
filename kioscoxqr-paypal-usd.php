@@ -17,10 +17,11 @@ add_action('plugins_loaded', function () {
     }
 
     require_once KQPU_PATH . 'includes/class-settings.php';
-    require_once KQPU_PATH . 'includes/class-currency-converter.php';
+    require_once KQPU_PATH . 'includes/class-exchange-rate.php';
+    require_once KQPU_PATH . 'includes/class-checkout-display.php';
     require_once KQPU_PATH . 'includes/class-order-meta.php';
 
     new KQPU_Settings();
-    new KQPU_Currency_Converter();
+    new KQPU_Checkout_Display();
     new KQPU_Order_Meta();
 });

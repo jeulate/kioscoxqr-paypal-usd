@@ -101,15 +101,14 @@ function kqpu_init_plugin() {
 
     // Migración: asegurar que ppcp-card-button-gateway esté en la lista guardada
     kqpu_maybe_migrate_options();
-}
-    
+
     // Enlaces rápidos
     add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
         $settings_link = '<a href="' . admin_url('admin.php?page=kqpu-settings') . '">Configuración</a>';
         array_unshift($links, $settings_link);
         return $links;
     });
-    
+
     // Compatibilidad con HPOS
     add_action('before_woocommerce_init', function() {
         if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {

@@ -5,11 +5,31 @@ if (!defined('ABSPATH')) exit;
 class KQPU_PayPal_Integration {
 
     public function __construct() {
-        // Solo hooks que sabemos que funcionan
+        // Conversión del payload enviado a PayPal
         add_filter('ppcp_create_order_request_body_data', [$this, 'convert_paypal_payload_to_usd'], 999, 3);
         add_filter('ppcp_patch_order_request_body_data', [$this, 'convert_paypal_payload_to_usd'], 999, 3);
+
+        // Intentar vía parámetros del SDK (funciona en algunas versiones de PPCP)
         add_filter('woocommerce_paypal_payments_sdk_url_params', [$this, 'force_sdk_currency_usd'], 999);
         add_filter('ppcp_sdk_url_params', [$this, 'force_sdk_currency_usd'], 999);
+
+        // Fallback garantizado: intercepta el src del script ya enqueued.
+        // Funciona en todas las versiones de PPCP porque actúa sobre el HTML final.
+        add_filter('script_loader_src', [$this, 'fix_paypal_sdk_currency_src'], 999, 2);
+    }
+
+    /**
+     * Reemplaza currency=BOB por currency=USD directamente en la URL del SDK de PayPal.
+     * PayPal no soporta BOB → HostedFields y CardFields fallan si la moneda no es válida.
+     */
+    public function fix_paypal_sdk_currency_src($src, $handle) {
+        if (!KQPU_Settings::is_enabled()) {
+            return $src;
+        }
+        if (!is_string($src) || strpos($src, 'paypal.com/sdk/js') === false) {
+            return $src;
+        }
+        return preg_replace('/([?&]currency=)[^&]+/', '${1}USD', $src);
     }
 
     public function force_sdk_currency_usd($params) {

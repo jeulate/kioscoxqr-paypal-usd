@@ -15,7 +15,13 @@ class KQPU_Gateway_Visibility {
             return $available_gateways;
         }
 
-        if (!function_exists('is_checkout') || !is_checkout()) {
+        // Checkout clásico (shortcode) → is_checkout() es true
+        // Checkout por bloques (Gutenberg) → la consulta llega vía REST API,
+        // por lo que is_checkout() devuelve false. Hay que permitir ambos casos.
+        $is_checkout_page = function_exists('is_checkout') && is_checkout();
+        $is_rest_request  = defined('REST_REQUEST') && REST_REQUEST;
+
+        if (!$is_checkout_page && !$is_rest_request) {
             return $available_gateways;
         }
 
@@ -29,7 +35,9 @@ class KQPU_Gateway_Visibility {
             isset($all_gateways['ppcp-card-button-gateway']) &&
             !isset($available_gateways['ppcp-card-button-gateway'])
         ) {
-            $available_gateways['ppcp-card-button-gateway'] = $all_gateways['ppcp-card-button-gateway'];
+            $gateway          = $all_gateways['ppcp-card-button-gateway'];
+            $gateway->enabled = 'yes'; // forzar habilitado aunque is_available() falle
+            $available_gateways['ppcp-card-button-gateway'] = $gateway;
         }
 
         return $available_gateways;

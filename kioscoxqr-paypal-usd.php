@@ -98,6 +98,10 @@ function kqpu_init_plugin() {
     if (class_exists('KQPU_PayPal_Integration')) {
         new KQPU_PayPal_Integration();
     }
+
+    // Migración: asegurar que ppcp-card-button-gateway esté en la lista guardada
+    kqpu_maybe_migrate_options();
+}
     
     // Enlaces rápidos
     add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
@@ -135,11 +139,36 @@ function kqpu_activate() {
         update_option('kqpu_exchange_rate', '6.96');
     }
     if (!get_option('kqpu_paypal_gateways')) {
-        update_option('kqpu_paypal_gateways', 'ppcp-gateway,paypal');
+        update_option('kqpu_paypal_gateways', 'ppcp-gateway,ppcp-card-button-gateway,paypal');
     }
 }
 
 register_deactivation_hook(__FILE__, 'kqpu_deactivate');
 function kqpu_deactivate() {
     // Limpieza opcional
+}
+
+// ============================================
+// MIGRACIÓN DE OPCIONES
+// ============================================
+function kqpu_maybe_migrate_options() {
+    $current = get_option('kqpu_paypal_gateways', '');
+    $ids = array_filter(array_map('trim', explode(',', $current)));
+
+    $changed = false;
+
+    // Asegurar ppcp-card-button-gateway
+    if (!in_array('ppcp-card-button-gateway', $ids, true)) {
+        $ids[] = 'ppcp-card-button-gateway';
+        $changed = true;
+    }
+    // Asegurar ppcp-gateway
+    if (!in_array('ppcp-gateway', $ids, true)) {
+        $ids[] = 'ppcp-gateway';
+        $changed = true;
+    }
+
+    if ($changed) {
+        update_option('kqpu_paypal_gateways', implode(',', $ids));
+    }
 }

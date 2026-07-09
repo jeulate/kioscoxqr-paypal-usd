@@ -5,65 +5,51 @@ if (!defined('ABSPATH')) exit;
 class KQPU_PayPal_Integration {
 
     public function __construct() {
-        add_action('woocommerce_checkout_create_order', [$this, 'convert_order_to_usd_for_paypal'], 20, 2);
+        add_filter('ppcp_create_order_request_body_data', [$this, 'convert_paypal_payload_to_usd'], 20, 3);
+        add_filter('ppcp_patch_order_request_body_data', [$this, 'convert_paypal_patch_to_usd'], 20, 1);
     }
 
-    private function is_paypal_checkout(): bool {
-        $method = '';
-
-        if (!empty($_POST['payment_method'])) {
-            $method = sanitize_text_field(wp_unslash($_POST['payment_method']));
+    public function convert_paypal_payload_to_usd($data, $payment_method = null, $request_data = null) {
+        if (!KQPU_Settings::is_enabled()) {
+            return $data;
         }
 
-        return in_array($method, KQPU_Settings::get_paypal_gateway_ids(), true);
+        return $this->convert_money_nodes($data);
     }
 
-    public function convert_order_to_usd_for_paypal($order, $data) {
-        if (!$this->is_paypal_checkout()) {
-            return;
+    public function convert_paypal_patch_to_usd($patches) {
+        if (!KQPU_Settings::is_enabled()) {
+            return $patches;
         }
 
-        $rate = KQPU_Exchange_Rate::bob_to_usd();
+        return $this->convert_money_nodes($patches);
+    }
 
-        $original_total_bob = (float) $order->get_total();
-
-        $order->set_currency('USD');
-
-        foreach ($order->get_items('line_item') as $item) {
-            $subtotal_bob = (float) $item->get_subtotal();
-            $total_bob    = (float) $item->get_total();
-
-            $item->update_meta_data('_kqpu_original_subtotal_bob', $subtotal_bob);
-            $item->update_meta_data('_kqpu_original_total_bob', $total_bob);
-
-            $item->set_subtotal(round($subtotal_bob / $rate, 2));
-            $item->set_total(round($total_bob / $rate, 2));
-            $item->set_subtotal_tax(0);
-            $item->set_total_tax(0);
+    private function convert_money_nodes($value) {
+        if (!is_array($value)) {
+            return $value;
         }
 
-        foreach ($order->get_items('fee') as $item) {
-            $total_bob = (float) $item->get_total();
-            $item->update_meta_data('_kqpu_original_fee_bob', $total_bob);
-            $item->set_total(round($total_bob / $rate, 2));
-            $item->set_total_tax(0);
+        if (isset($value['currency_code'], $value['value'])) {
+            if ($value['currency_code'] === 'BOB') {
+                $value['currency_code'] = 'USD';
+                $value['value'] = $this->convert_amount_to_usd($value['value']);
+            }
+
+            return $value;
         }
 
-        foreach ($order->get_items('shipping') as $item) {
-            $total_bob = (float) $item->get_total();
-            $item->update_meta_data('_kqpu_original_shipping_bob', $total_bob);
-            $item->set_total(round($total_bob / $rate, 2));
-            $item->set_total_tax(0);
+        foreach ($value as $key => $child) {
+            $value[$key] = $this->convert_money_nodes($child);
         }
 
-        $order->set_cart_tax(0);
-        $order->set_shipping_tax(0);
-        $order->set_total(round($original_total_bob / $rate, 2));
+        return $value;
+    }
 
-        $order->update_meta_data('_kqpu_original_currency', 'BOB');
-        $order->update_meta_data('_kqpu_converted_currency', 'USD');
-        $order->update_meta_data('_kqpu_exchange_rate', $rate);
-        $order->update_meta_data('_kqpu_total_bob_original', $original_total_bob);
-        $order->update_meta_data('_kqpu_total_usd_charged', round($original_total_bob / $rate, 2));
+    private function convert_amount_to_usd($amount): string {
+        $bob = (float) $amount;
+        $usd = KQPU_Exchange_Rate::bob_to_usd_amount($bob);
+
+        return number_format($usd, 2, '.', '');
     }
 }

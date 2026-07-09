@@ -9,8 +9,18 @@ class KQPU_PayPal_Integration {
         add_filter('ppcp_patch_order_request_body_data', [$this, 'convert_paypal_payload_to_usd'], 999, 3);
         add_filter('woocommerce_paypal_payments_sdk_url_params', [$this, 'force_sdk_currency_usd'], 999);
         add_filter('ppcp_sdk_url_params', [$this, 'force_sdk_currency_usd'], 999);
+        add_filter('woocommerce_paypal_payments_sdk_script_url', [$this, 'force_sdk_url_currency_usd'], 999);
     }
+    public function force_sdk_url_currency_usd($url) {
+        if (!is_string($url)) {
+            return $url;
+        }
 
+        $url = remove_query_arg('currency', $url);
+        $url = add_query_arg('currency', 'USD', $url);
+
+        return $url;
+    }
     public function force_sdk_currency_usd($params) {
         if (!is_array($params)) {
             return $params;

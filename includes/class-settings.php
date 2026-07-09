@@ -70,10 +70,12 @@ class KQPU_Settings {
                             <input type="text"
                                    style="width: 420px;"
                                    name="<?php echo esc_attr(self::OPTION_PAYPAL_GATEWAYS); ?>"
-                                   value="<?php echo esc_attr(get_option(self::OPTION_PAYPAL_GATEWAYS, 'ppcp-gateway,paypal')); ?>">
+                            value="<?php echo esc_attr(get_option(self::OPTION_PAYPAL_GATEWAYS, 'ppcp-gateway,ppcp-card-button-gateway,paypal')); ?>"
                             <p class="description">
-                                Para WooCommerce PayPal Payments normalmente usa:
-                                <code>ppcp-gateway</code>. Separar varios con coma.
+                                Métodos PayPal del plugin WooCommerce PayPal Payments:
+                                <code>ppcp-gateway</code> (cuenta PayPal / app),
+                                <code>ppcp-card-button-gateway</code> (tarjeta sin cuenta).
+                                Separar varios con coma.
                             </p>
                         </td>
                     </tr>
@@ -95,7 +97,7 @@ class KQPU_Settings {
     }
 
     public static function get_paypal_gateway_ids() {
-        $value = get_option(self::OPTION_PAYPAL_GATEWAYS, 'ppcp-gateway,paypal');
+        $value = get_option(self::OPTION_PAYPAL_GATEWAYS, 'ppcp-gateway,ppcp-card-button-gateway,paypal');
         return array_filter(array_map('trim', explode(',', $value)));
     }
 }
